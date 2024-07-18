@@ -9,6 +9,7 @@ import android.widget.CompoundButton;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.todolist.AddNewTask;
@@ -37,6 +38,30 @@ public class ToDoAdapter extends RecyclerView.Adapter<ToDoAdapter.MyViewHolder> 
         View view = LayoutInflater.from(activity).inflate(R.layout.each_task, parent , false);
         firestore = FirebaseFirestore.getInstance();
         return new MyViewHolder(view);
+    }
+
+    public void deleteTask(int position){
+        ToDoModel toDoModel = todoList.get(position);
+        firestore.collection("task").document(toDoModel.TaskId).delete();
+        todoList.remove(position);
+        notifyItemRemoved(position);
+    }
+
+    public Context getContext(){
+        return activity;
+    }
+
+    public void editTask(int position){
+        ToDoModel toDoModel = todoList.get(position);
+
+        Bundle bundle = new Bundle();
+        bundle.putString("task" , toDoModel.getTask());
+        bundle.putString("due" , toDoModel.getDue());
+        bundle.putString("id" , toDoModel.TaskId);
+
+        AddNewTask addNewTask = new AddNewTask();
+        addNewTask.setArguments(bundle);
+        addNewTask.show(activity.getSupportFragmentManager() , addNewTask.getTag());
     }
 
 

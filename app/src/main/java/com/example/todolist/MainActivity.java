@@ -8,6 +8,7 @@ import androidx.annotation.NonNull;
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -34,24 +35,30 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements OnDialogCloseListener{
 
     private RecyclerView recyclerView;
     private FloatingActionButton mFab;
     private FirebaseFirestore firestore;
     private ToDoAdapter adapter;
     private List<ToDoModel> mList ;
+    private Query query;
+    private Toolbar toolbar;
+    private ListenerRegistration listenerRegistration;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
+        toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
         recyclerView = findViewById(R.id.recyclerview);
         mFab = findViewById(R.id.floatingActionButton);
         firestore = FirebaseFirestore.getInstance();
 
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        recyclerView.setHasFixedSize(true);
+        recyclerView.setLayoutManager(new LinearLayoutManager(MainActivity.this));
 
 
         mFab.setOnClickListener(new View.OnClickListener() {
@@ -64,15 +71,19 @@ public class MainActivity extends AppCompatActivity {
         mList= new ArrayList<>();
 
         adapter = new ToDoAdapter(MainActivity.this, mList);
-        recyclerView.setAdapter(adapter);
+
+        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(new TouchHelper(adapter));
+        itemTouchHelper.attachToRecyclerView(recyclerView);
         showData();
+        recyclerView.setAdapter(adapter);
 
 
 
     }
 
     private void showData(){
-        firestore.collection("task").addSnapshotListener(new EventListener<QuerySnapshot>() {
+        query = firestore.collection("task").orderBy("time" , Query.Direction.DESCENDING);
+        listenerRegistration=  query.addSnapshotListener(new EventListener<QuerySnapshot>() {
             @Override
             public void onEvent(@Nullable QuerySnapshot value, @Nullable FirebaseFirestoreException error) {
                for (DocumentChange documentChange : value.getDocumentChanges()){
@@ -83,12 +94,16 @@ public class MainActivity extends AppCompatActivity {
                        adapter.notifyDataSetChanged();
                    }
                }
-               Collections.reverse(mList);
+                listenerRegistration.remove();
             }
         });
     }
 
 
-
-
+    @Override
+    public void onDialogClose(DialogInterface dialogInterface) {
+        mList.clear();
+        showData();
+        adapter.notifyDataSetChanged();
+    }
 }
